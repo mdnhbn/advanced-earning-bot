@@ -63,8 +63,21 @@ async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("👋 এডমিন প্যানেলে স্বাগতম!", reply_markup=build_admin_menu())
     
     elif data == "admin_stats":
-        # TODO: পরিসংখ্যান দেখানোর কোড এখানে লেখা হবে।
-        await query.edit_message_text("📊 পরিসংখ্যান (শীঘ্রই আসছে...)", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ ফিরে যান", callback_data="admin_main_menu")]]))
+        stats_result = user_manager.get_bot_statistics()
+        if stats_result['success']:
+            stats = stats_result['data']
+            text = (
+                f"📊 **বটের বর্তমান পরিসংখ্যান**\n\n"
+                f"👤 মোট ব্যবহারকারী: `{stats['total_users']}`\n"
+                f"✅ ভেরিফাইড ব্যবহারকারী: `{stats['verified_users']}`\n"
+                f"🚫 ব্যানড ব্যবহারকারী: `{stats['banned_users']}`\n\n"
+                f"_(এই তথ্য রিয়েল-টাইমে আপডেট হয়।)_"
+            )
+        else:
+            text = f"দুঃখিত, পরিসংখ্যান লোড করতে একটি সমস্যা হয়েছে:\n`{stats_result['message']}`"
+        
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ ফিরে যান", callback_data="admin_main_menu")]])
+        await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
     
     elif data == "admin_global_settings":
         await show_global_settings(query)
