@@ -155,18 +155,27 @@ def update_user_language(user_id, lang_code):
         if conn:
             conn.close()
 
-# উদাহরণ
-if __name__ == '__main__':
-    # এই মডিউলটি সরাসরি রান করার জন্য নয়, তবে টেস্ট করার জন্য ব্যবহার করা যেতে পারে।
-    # প্রথমে database.py এবং bot_settings.py রান করতে হবে।
-    
-    # টেস্ট ইউজার যোগ করা
-    test_user = add_or_get_user(12345, 'testuser', referrer_id=98765)
-    print("Test User Data:", test_user)
-
-    # ব্যালেন্স আপডেট
-    update_balance(12345, 100)
-    
-    # তথ্য আবার নিয়ে আসা
-    updated_user = get_user_by_id(12345)
-    print("Updated User Data:", updated_user)
+def get_bot_statistics():
+    """
+    বটের সার্বিক পরিসংখ্যান নিয়ে আসে।
+    """
+    stats = {
+        'total_users': 0,
+        'verified_users': 0,
+        'banned_users': 0
+    }
+    try:
+        conn = sqlite3.connect(DATABASE_NAME)
+        cursor = conn.cursor()
+        
+        stats['total_users'] = cursor.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        stats['verified_users'] = cursor.execute("SELECT COUNT(*) FROM users WHERE is_verified = TRUE").fetchone()[0]
+        stats['banned_users'] = cursor.execute("SELECT COUNT(*) FROM users WHERE is_banned = TRUE").fetchone()[0]
+        
+        return {'success': True, 'data': stats}
+    except sqlite3.Error as e:
+        print(f"পরিসংখ্যান নিয়ে আসতে ত্রুটি: {e}")
+        return {'success': False, 'message': str(e)}
+    finally:
+        if conn:
+            conn.close()
