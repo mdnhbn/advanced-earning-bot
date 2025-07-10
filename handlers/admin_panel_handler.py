@@ -1,7 +1,7 @@
 # advanced_earning_bot/handlers/admin_panel_handler.py
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import ContextTypes, ConversationHandler
 
 from config import ADMIN_IDS
 from modules import user_manager, bot_settings, ad_manager
@@ -21,9 +21,9 @@ async def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
 def build_admin_menu():
-    """মূল এডমিন پ্যানেলের মেনু বাটন তৈরি করে।"""
+    """মূল এডমিন প্যানেলের মেনু বাটন তৈরি করে।"""
     pending_ads_count = len(ad_manager.get_pending_ads())
-    ad_manage_text = f"📢 বিজ্ঞাপন ম্যানেজমেন্ট ({pending_ads_count})"
+    ad_manage_text = f"📢 বিজ্ঞাপন ম্যানেজমেন্ট ({pending_ads_count})" if pending_ads_count > 0 else "📢 বিজ্ঞাপন ম্যানেজমেন্ট"
 
     keyboard = [
         [InlineKeyboardButton("📊 পরিসংখ্যান", callback_data="admin_stats")],
@@ -31,7 +31,7 @@ def build_admin_menu():
         [InlineKeyboardButton("🔧 ফিচার কন্ট্রোল", callback_data="admin_feature_control")],
         [InlineKeyboardButton("👤 ব্যবহারকারী ম্যানেজমেন্ট", callback_data="admin_user_manage_start")],
         [InlineKeyboardButton(ad_manage_text, callback_data="admin_ad_manage")],
-        [InlineKeyboardButton("❌ پ্যানেল বন্ধ করুন", callback_data="admin_close")]
+        [InlineKeyboardButton("❌ প্যানেল বন্ধ করুন", callback_data="admin_close")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -46,26 +46,30 @@ def build_user_manage_menu(user_id, is_banned=False):
         [
             InlineKeyboardButton(ban_text, callback_data=f"user_toggle_ban_{user_id}")
         ],
-        [InlineKeyboardButton("⬅️ এডমিন মেনুতে ফিরে যান", callback_data="admin_main_menu")]
+        [InlineKeyboardButton("⬅️ ফিরে যান", callback_data="admin_main_menu")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 # --- Main Command Handler ---
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/admin কমান্ড হ্যান্ডেল করে এবং মূল এডমিন پ্যানেল দেখায়।"""
+    """/admin কমান্ড হ্যান্ডেল করে এবং মূল এডমিন প্যানেল দেখায়।"""
     user_id = update.effective_user.id
     if not await is_admin(user_id):
         await update.message.reply_text("দুঃখিত, এই কমান্ডটি শুধুমাত্র এডমিনদের জন্য।")
         return
 
-    text = "👋 এডমিন پ্যানেলে স্বাগতম! অনুগ্রহ করে একটি অপশন বেছে নিন:"
-    await update.message.reply_text(text, reply_markup=build_admin_menu())
+    text = "👋 এডমিন প্যানেলে স্বাগতম! অনুগ্রহ করে একটি অপশন বেছে নিন:"
+    # যদি মেসেজ হয়, নতুন মেসেজ পাঠান। যদি বাটন ক্লিক হয়, এডিট করুন।
+    if update.callback_query:
+        await update.callback_query.edit_message_text(text, reply_markup=build_admin_menu())
+    else:
+        await update.message.reply_text(text, reply_markup=build_admin_menu())
 
 
 # --- Callback Query Handlers ---
 async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """এডমিন پ্যানেলের সকল বাটন ক্লিক হ্যান্ডেল করে।"""
+    """এডমিন প্যানেলের সকল বাটন ক্লিক হ্যান্ডেল করে।"""
     query = update.callback_query
     await query.answer()
     
@@ -77,11 +81,10 @@ async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     data = query.data
 
     if data == "admin_main_menu":
-        await query.edit_message_text("👋 এডমিন پ্যানেলে স্বাগতম!", reply_markup=build_admin_menu())
+        await admin_panel(update, context)
     
     elif data == "admin_stats":
         stats_result = user_manager.get_bot_statistics()
-        # ... (বাকি কোড আগের মতোই) ...
         if stats_result['success']:
             stats = stats_result['data']
             text = (
@@ -106,17 +109,15 @@ async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await show_pending_ads(query)
 
     elif data == "admin_close":
-        await query.edit_message_text("پ্যানেল বন্ধ করা হয়েছে।")
+        await query.edit_message_text("প্যানেল বন্ধ করা হয়েছে।")
 
 
 async def show_global_settings(query):
-    # ... (আগের মতোই) ...
     text = "⚙️ গ্লোবাল সেটিংস\n\nএখান থেকে আপনি বটের মূল নিয়মাবলী পরিবর্তন করতে পারবেন।"
     keyboard = [[InlineKeyboardButton("⬅️ ফিরে যান", callback_data="admin_main_menu")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def show_feature_control(query):
-    # ... (আগের মতোই) ...
     text = "🔧 ফিচার কন্ট্রোল\n\nএখান থেকে নির্দিষ্ট ফিচার চালু বা বন্ধ করতে পারবেন।"
     settings_to_show = {'feature_ads_view': '👁️ বিজ্ঞাপন দেখা', 'feature_deposit': '💰 ডিপোজিট', 'feature_withdrawal': '💸 উইথড্র', 'feature_balance_transfer': '🔁 ব্যালেন্স ট্রান্সফার'}
     buttons = []
@@ -129,7 +130,6 @@ async def show_feature_control(query):
 
 
 async def toggle_feature_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # ... (আগের মতোই) ...
     query = update.callback_query
     await query.answer()
     setting_name = query.data.replace("toggle_", "")
@@ -150,27 +150,27 @@ async def show_pending_ads(query):
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
-    # প্রথম পেন্ডিং বিজ্ঞাপনটি দেখান
     ad_data = pending_ads[0]
-    ad_id, owner_id, _, ad_type, content, _, target_views, _, duration, _ = ad_data
-
+    columns = ['ad_id', 'owner_user_id', 'ad_source', 'ad_type', 'ad_content', 'status', 'target_views', 'current_views', 'view_duration_seconds', 'viewed_by_users']
+    ad_dict = dict(zip(columns, ad_data))
+    
     text = (
         f"**📢 নতুন বিজ্ঞাপন রিভিউ**\n\n"
-        f"**Ad ID:** `{ad_id}`\n"
-        f"**জমা দিয়েছে:** `{owner_id}`\n"
-        f"**ধরন:** `{ad_type}`\n"
-        f"**কন্টেন্ট:** `{content}`\n"
-        f"**টার্গেট ভিউ:** `{target_views}`\n"
-        f"**সময়কাল:** `{duration} সেকেন্ড`\n\n"
+        f"**Ad ID:** `{ad_dict['ad_id']}`\n"
+        f"**জমা দিয়েছে:** `{ad_dict['owner_user_id']}`\n"
+        f"**ধরন:** `{ad_dict['ad_type']}`\n"
+        f"**কন্টেন্ট:** `{ad_dict['ad_content']}`\n"
+        f"**টার্গেট ভিউ:** `{ad_dict['target_views']}`\n"
+        f"**সময়কাল:** `{ad_dict['view_duration_seconds']} সেকেন্ড`\n\n"
         f"অনুগ্রহ করে বিজ্ঞাপনটি অনুমোদন বা প্রত্যাখ্যান করুন:"
     )
     
     keyboard = [
         [
-            InlineKeyboardButton("✅ অনুমোদন করুন", callback_data=f"ad_approve_{ad_id}"),
-            InlineKeyboardButton("❌ প্রত্যাখ্যান করুন", callback_data=f"ad_reject_{ad_id}")
+            InlineKeyboardButton("✅ অনুমোদন করুন", callback_data=f"ad_approve_{ad_dict['ad_id']}"),
+            InlineKeyboardButton("❌ প্রত্যাখ্যান করুন", callback_data=f"ad_reject_{ad_dict['ad_id']}")
         ],
-        [InlineKeyboardButton("➡️ পরবর্তী (Skip)", callback_data="admin_ad_manage")], # আপাতত রিফ্রেশ করবে
+        [InlineKeyboardButton("➡️ পরবর্তী (Skip)", callback_data="admin_ad_manage")],
         [InlineKeyboardButton("⬅️ ফিরে যান", callback_data="admin_main_menu")]
     ]
     
@@ -180,10 +180,9 @@ async def show_pending_ads(query):
 async def ad_review_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """বিজ্ঞাপন অনুমোদন বা প্রত্যাখ্যান করার কাজ করে।"""
     query = update.callback_query
-    await query.answer()
-
+    
     data = query.data.split('_')
-    action = data[1] # 'approve' or 'reject'
+    action = data[1] 
     ad_id = int(data[2])
 
     if action == "approve":
@@ -191,34 +190,34 @@ async def ad_review_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("বিজ্ঞাপনটি অনুমোদন করা হয়েছে!", show_alert=True)
     elif action == "reject":
         ad_manager.update_ad_status(ad_id, "rejected")
-        # TODO: ব্যবহারকারীকে তার টাকা ফেরত দেওয়া এবং নোটিফিকেশন পাঠানোর লজিক।
         await query.answer("বিজ্ঞাপনটি প্রত্যাখ্যান করা হয়েছে।", show_alert=True)
+        # TODO: ব্যবহারকারীকে টাকা ফেরত দেওয়া এবং নোটিফিকেশন পাঠানোর লজিক।
 
-    # পরবর্তী পেন্ডিং বিজ্ঞাপনটি দেখান
     await show_pending_ads(query)
 
 
-# --- User Management Conversation (আগের মতোই) ---
+# --- User Management Conversation ---
 async def user_manage_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     text = "👤 **ব্যবহারকারী ম্যানেজমেন্ট**\n\nঅনুগ্রহ করে যে ব্যবহারকারীকে ম্যানেজ করতে চান তার টেলিগ্রাম আইডি দিন:"
-    await query.edit_message_text(text)
+    context.user_data['last_admin_message'] = await query.edit_message_text(text)
     return USER_ID_INPUT
 
 async def user_id_input_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         target_user_id = int(update.message.text)
+        await update.message.delete() # ইউজার ইনপুট ডিলিট করে দিন
         user_data = user_manager.get_user_by_id(target_user_id)
         if not user_data:
-            await update.message.reply_text("এই আইডির কোনো ব্যবহারকারী খুঁজে পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন বা /cancel দিন।")
+            await context.user_data['last_admin_message'].edit_text("এই আইডির কোনো ব্যবহারকারী খুঁজে পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন বা /cancel দিন।")
             return USER_ID_INPUT
         
         context.user_data['target_user_id'] = target_user_id
-        await show_user_profile(update.message, user_data)
+        await show_user_profile(context.user_data['last_admin_message'], user_data)
         
-    except ValueError:
-        await update.message.reply_text("এটি একটি সঠিক নিউমেরিক আইডি নয়। অনুগ্রহ করে আবার চেষ্টা করুন বা /cancel দিন।")
+    except (ValueError, KeyError):
+        await context.user_data['last_admin_message'].edit_text("এটি একটি সঠিক নিউমেরিক আইডি নয়। অনুগ্রহ করে আবার চেষ্টা করুন বা /cancel দিন।")
         return USER_ID_INPUT
 
     return ConversationHandler.END
@@ -228,14 +227,14 @@ async def show_user_profile(message, user_data):
     text = (
         f"👤 **ব্যবহারকারীর প্রোফাইল**\n\n"
         f"**ID:** `{user_id}`\n"
-        f"**Username:** @{user_data['username']}\n"
+        f"**Username:** @{user_data.get('username', 'N/A')}\n"
         f"**ব্যালেন্স:** `{user_data['balance']}` পয়েন্ট\n"
         f"**ভেরিফাইড:** `{'হ্যাঁ' if user_data['is_verified'] else 'না'}`\n"
         f"**ব্যানড:** `{'হ্যাঁ' if user_data['is_banned'] else 'না'}`\n"
         f"**ওয়ার্নিং:** `{user_data['warning_count']}`\n"
     )
     keyboard = build_user_manage_menu(user_id, user_data['is_banned'])
-    await message.reply_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await message.edit_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
 async def user_manage_actions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -258,7 +257,7 @@ async def user_manage_actions(update: Update, context: ContextTypes.DEFAULT_TYPE
         context.user_data['target_user_id'] = target_user_id
         context.user_data['balance_action'] = action
         action_text = "যোগ" if action == "add" else "কাটতে"
-        await query.edit_message_text(f"আপনি কত পয়েন্ট {action_text} চান? অনুগ্রহ করে পরিমাণটি লিখুন:")
+        context.user_data['last_admin_message'] = await query.edit_message_text(f"আপনি কত পয়েন্ট {action_text} চান? অনুগ্রহ করে পরিমাণটি লিখুন:")
         return BALANCE_CHANGE_INPUT
 
     return ConversationHandler.END
@@ -266,8 +265,9 @@ async def user_manage_actions(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def balance_change_input_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         amount = int(update.message.text)
+        await update.message.delete()
         if amount <= 0:
-            await update.message.reply_text("পরিমাণটি অবশ্যই একটি পজিটিভ সংখ্যা হতে হবে।")
+            await context.user_data['last_admin_message'].edit_text("পরিমাণটি অবশ্যই একটি পজিটিভ সংখ্যা হতে হবে।")
             return ConversationHandler.END
 
         target_user_id = context.user_data['target_user_id']
@@ -275,19 +275,22 @@ async def balance_change_input_received(update: Update, context: ContextTypes.DE
         amount_to_change = amount if action == "add" else -amount
         
         user_manager.update_balance(target_user_id, amount_to_change)
-        await update.message.reply_text(f"সফলভাবে {amount} পয়েন্ট {'যোগ' if action == 'add' else 'কাটা'} হয়েছে।")
         
         user_data = user_manager.get_user_by_id(target_user_id)
-        await show_user_profile(update.message, user_data)
+        await show_user_profile(context.user_data['last_admin_message'], user_data)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"সফলভাবে {amount} পয়েন্ট {'যোগ' if action == 'add' else 'কাটা'} হয়েছে।")
 
     except (ValueError, KeyError):
-        await update.message.reply_text("একটি সমস্যা হয়েছে বা সঠিক পরিমাণ দেওয়া হয়নি।")
+        await context.user_data['last_admin_message'].edit_text("একটি সমস্যা হয়েছে বা সঠিক পরিমাণ দেওয়া হয়নি।")
 
     return ConversationHandler.END
 
 async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """যেকোনো কনভার্সেশন বাতিল করে।"""
     if 'target_user_id' in context.user_data: del context.user_data['target_user_id']
     if 'balance_action' in context.user_data: del context.user_data['balance_action']
+        
     await update.message.reply_text("অপারেশন বাতিল করা হয়েছে।")
-    await admin_panel(update, context) # এডমিন প্যানেল আবার দেখান
+    # মূল এডমিন প্যানেলটি আবার দেখান
+    await admin_panel(update, context)
     return ConversationHandler.END
