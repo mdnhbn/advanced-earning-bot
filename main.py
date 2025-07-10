@@ -28,17 +28,21 @@ def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
 
     # --- ConversationHandler সেটআপ ---
-    # এটি ব্যবহারকারী থেকে ধাপে ধাপে ইনপুট নেওয়ার প্রক্রিয়া পরিচালনা করে।
     conv_handler = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(admin_panel_handler.user_manage_start, pattern='^admin_user_manage_start$'),
             CallbackQueryHandler(admin_panel_handler.user_manage_actions, pattern='^user_(add|deduct)_balance_'),
-            CallbackQueryHandler(admin_panel_handler.edit_setting_start, pattern='^edit_setting_')
+            CallbackQueryHandler(admin_panel_handler.edit_setting_start, pattern='^edit_setting_'),
+            CallbackQueryHandler(admin_panel_handler.add_new_ad_start, pattern='^admin_ad_add_new$'),
+            CallbackQueryHandler(admin_panel_handler.add_ad_type_selected, pattern='^add_ad_type_')
         ],
         states={
             admin_panel_handler.USER_ID_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.user_id_input_received)],
             admin_panel_handler.BALANCE_CHANGE_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.balance_change_input_received)],
-            admin_panel_handler.SETTING_VALUE_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.setting_value_input_received)]
+            admin_panel_handler.SETTING_VALUE_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.setting_value_input_received)],
+            admin_panel_handler.ADD_AD_CONTENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.add_ad_content_received)],
+            admin_panel_handler.ADD_AD_TARGET_VIEWS: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.add_ad_target_views_received)],
+            admin_panel_handler.ADD_AD_DURATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_panel_handler.add_ad_duration_received)],
         },
         fallbacks=[
             CommandHandler('cancel', admin_panel_handler.cancel_conversation),
@@ -52,20 +56,16 @@ def main() -> None:
     # --- হ্যান্ডলার রেজিস্ট্রেশন ---
     application.add_handler(CommandHandler("start", start_handler.start), group=0)
     application.add_handler(CommandHandler("admin", admin_panel_handler.admin_panel), group=0)
-
-    # কনভার্সেশন হ্যান্ডলার যোগ করা (গ্রুপ 1)
     application.add_handler(conv_handler, group=1)
     
-    # সাধারণ বাটন ক্লিকের জন্য CallbackQueryHandler (গ্রুপ 0)
     application.add_handler(CallbackQueryHandler(start_handler.verify_membership_callback, pattern='^verify_membership$'), group=0)
-    application.add_handler(CallbackQueryHandler(admin_panel_handler.admin_panel_callback, pattern='^admin_(stats|global_settings|feature_control|ad_manage|close|main_menu)$'), group=0)
+    application.add_handler(CallbackQueryHandler(admin_panel_handler.admin_panel_callback, pattern='^admin_(stats|global_settings|feature_control|close|main_menu|ad_manage_menu|ad_pending_list)$'), group=0)
     application.add_handler(CallbackQueryHandler(admin_panel_handler.toggle_feature_status, pattern='^toggle_'), group=0)
     application.add_handler(CallbackQueryHandler(admin_panel_handler.ad_review_action, pattern='^ad_(approve|reject)_'), group=0)
     application.add_handler(CallbackQueryHandler(admin_panel_handler.user_manage_actions, pattern='^user_toggle_ban_'), group=0)
 
     print("সকল হ্যান্ডলার সফলভাবে রেজিস্টার করা হয়েছে।")
 
-    # --- API সার্ভার এবং বট একসাথে চালানো ---
     config = uvicorn.Config(app=fastapi_app, host="0.0.0.0", port=8000, log_level="info")
     server = uvicorn.Server(config)
     
