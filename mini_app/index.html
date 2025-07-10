@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Earning Bot Dashboard</title>
+    <!-- স্টাইলশিট লিঙ্ক করুন -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- টেলিগ্রাম মিনি অ্যাপের জন্য প্রয়োজনীয় স্ক্রিপ্ট -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- হেডার: ব্যবহারকারীর প্রোফাইল এবং ব্যালেন্স দেখানোর জন্য -->
+        <header class="profile-header">
+            <div class="profile-info">
+                <img src="assets/images/default_avatar.png" alt="Avatar" class="avatar">
+                <span id="username-display" class="username">Loading...</span>
+            </div>
+            <div class="balance-container">
+                <span id="balance-display" class="balance-amount">0</span>
+                <img src="assets/images/coin_icon.png" alt="Coin" class="coin-icon">
+            </div>
+        </header>
+
+        <!-- প্রধান মেনু: বিভিন্ন কাজের জন্য বাটন -->
+        <main class="main-menu">
+            <div class="menu-grid">
+                <!-- প্রতিটি বাটন একটি নির্দিষ্ট কাজ করবে -->
+                <button id="watch-ad-btn" class="menu-button">
+                    <img src="assets/images/watch_ad_icon.png" alt="Watch Ad">
+                    <span>বিজ্ঞাপন দেখুন</span>
+                </button>
+                
+                <button id="daily-bonus-btn" class="menu-button">
+                    <img src="assets/images/bonus_icon.png" alt="Daily Bonus">
+                    <span>দৈনিক বোনাস</span>
+                </button>
+                
+                <button id="post-ad-btn" class="menu-button">
+                    <img src="assets/images/post_ad_icon.png" alt="Post Ad">
+                    <span>বিজ্ঞাপন দিন</span>
+                </button>
+                
+                <button id="referral-btn" class="menu-button">
+                    <img src="assets/images/referral_icon.png" alt="Referral">
+                    <span>রেফারেল</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- ফুটার: নেভিগেশন বার -->
+        <footer class="bottom-nav">
+            <button class="nav-button active">
+                <img src="assets/images/home_icon.png" alt="Home">
+                <span>Home</span>
+            </button>
+            <button id="wallet-btn" class="nav-button">
+                <img src="assets/images/wallet_icon.png" alt="Wallet">
+                <span>ওয়ালেট</span>
+            </button>
+            <button id="profile-btn" class="nav-button">
+                <img src="assets/images/profile_icon.png" alt="Profile">
+                <span>প্রোফাইল</span>
+            </button>
+        </footer>
+
+        <!-- লোডিং স্পিনার (প্রাথমিকভাবে লুকানো থাকবে) -->
+        <div id="loading-spinner" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- নোটিফিকেশন দেখানোর জন্য (প্রাথমিকভাবে লুকানো থাকবে) -->
+        <div id="notification" class="notification-toast"></div>
+
+    </div>
+
+    <!-- আমাদের কাস্টম জাভাস্ক্রিপ্ট ফাইলগুলো লিঙ্ক করুন -->
+    <script src="js/api_client.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>
