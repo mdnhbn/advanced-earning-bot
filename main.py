@@ -17,7 +17,8 @@ from modules.bot_settings import initialize_bot_settings
 from api.routes import app as fastapi_app
 from handlers import start_handler, admin_panel_handler
 
-def main() -> None:
+# main ফাংশনটিকে async হিসেবে ঘোষণা করতে হবে
+async def main() -> None:
     print("ডাটাবেস ইনিশিয়ালাইজ করা হচ্ছে...")
     initialize_database()
     print("বটের ডিফল্ট সেটিংস লোড করা হচ্ছে...")
@@ -27,7 +28,7 @@ def main() -> None:
     print("টেলিগ্রাম অ্যাপ্লিকেশন তৈরি করা হচ্ছে...")
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # --- ConversationHandler সেটআপ ---
+    # --- ConversationHandler সেটআপ (আপনার কোড অপরিবর্তিত) ---
     conv_handler = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(admin_panel_handler.user_manage_start, pattern='^admin_user_manage_start$'),
@@ -53,7 +54,7 @@ def main() -> None:
         allow_reentry=True
     )
 
-    # --- হ্যান্ডলার রেজিস্ট্রেশন ---
+    # --- হ্যান্ডলার রেজিস্ট্রেশন (আপনার কোড অপরিবর্তিত) ---
     application.add_handler(CommandHandler("start", start_handler.start), group=0)
     application.add_handler(CommandHandler("admin", admin_panel_handler.admin_panel), group=0)
     application.add_handler(conv_handler, group=1)
@@ -66,19 +67,29 @@ def main() -> None:
 
     print("সকল হ্যান্ডলার সফলভাবে রেজিস্টার করা হয়েছে।")
 
+    # --- সঠিক পদ্ধতিতে বট এবং সার্ভার চালানো ---
     config = uvicorn.Config(app=fastapi_app, host="0.0.0.0", port=8000, log_level="info")
     server = uvicorn.Server(config)
     
-    async def run_concurrently():
-        print("বট পোলিং এবং API সার্ভার একসাথে চালু হচ্ছে...")
-        bot_task = asyncio.create_task(application.run_polling(drop_pending_updates=True))
-        server_task = asyncio.create_task(server.serve())
-        await asyncio.gather(bot_task, server_task)
+    # `async with` ব্যবহার করলে application.initialize() এবং application.shutdown() নিজে থেকেই সঠিকভাবে কল হবে
+    async with application:
+        print("বট এবং API সার্ভার চালু করা হচ্ছে...")
+        await application.start()  # বটকে ব্যাকগ্রাউন্ডে পোলিং শুরু করার জন্য প্রস্তুত করে
+        await application.updater.start_polling() # পোলিং চালু করে
 
-    try:
-        asyncio.run(run_concurrently())
-    except (KeyboardInterrupt, SystemExit):
-        print("বট এবং সার্ভার বন্ধ করা হচ্ছে।")
+        try:
+            await server.serve() # API সার্ভার চালু করে এবং প্রোগ্রামটিকে এখানে ধরে রাখে
+        except (KeyboardInterrupt, SystemExit):
+            print("সার্ভার বন্ধের অনুরোধ পাওয়া গেছে...")
+        finally:
+            print("বটের পোলিং বন্ধ করা হচ্ছে...")
+            await application.updater.stop() # পোলিং বন্ধ করে
+            await application.stop()       # অ্যাপ্লিকেশন ক্লিনার বন্ধ করে
+            print("বট সফলভাবে বন্ধ হয়েছে।")
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("প্রোগ্রাম বন্ধ করা হলো।")
